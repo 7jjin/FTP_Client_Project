@@ -219,6 +219,9 @@ namespace FTP_Client_Project
             myDirectory.Nodes[0].Expand();
         }
 
+
+        teststsetsttsetsetsetset
+
         // 초기화
         private void InitForm()
         {
