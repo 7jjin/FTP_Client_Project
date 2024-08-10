@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using System.Diagnostics;
 
 namespace FTP_Client_Project
 {
@@ -52,7 +53,8 @@ namespace FTP_Client_Project
 
             // 내 드라이브의 모든 폴더 경로 가져오기
             DriveInfo[] allDrives = DriveInfo.GetDrives();
-            Console.WriteLine("My_allDrives",allDrives);
+            Console.WriteLine("My_allDrives", allDrives);
+
 
             foreach (DriveInfo dname in allDrives)
             {
@@ -257,12 +259,20 @@ namespace FTP_Client_Project
                 MessageBox.Show("인증성공");
                 txtStatus.Text = "연결됨";
                 CONNECT_STATUS = "CONNECT";
-                DisplayText("채팅 서버에 연결 되었습니다.");
+                DisplayText("서버에 연결 되었습니다.");
 
                 // 폴더 목록 수신
+
+                buffer = new byte[1024];
                 bytes = stream.Read(buffer, 0, buffer.Length);
-                string folderList = Encoding.Unicode.GetString(buffer, 0, bytes);
-                DisplayText("폴더 목록:\n" + folderList.Replace(";", "\n"));
+                //string folderList = Encoding.Unicode.GetString(buffer, 0, bytes);
+                //List<string> folderAndFileList = JsonConvert.DeserializeObject<List<string>>(folderList);
+                //PopulateTreeView(ftpDirectory, folderList);
+                string resultJson = Encoding.UTF8.GetString(buffer, 0, bytes);
+                List<DriveInfo> drives = JsonConvert.DeserializeObject<List<DriveInfo>>(resultJson);
+
+                Debug.WriteLine("folderList: ", resultJson);
+                DisplayText("폴더 목록:\n" + resultJson);
 
 
                 Thread t_handler = new Thread(GetMessage);
@@ -276,6 +286,57 @@ namespace FTP_Client_Project
                 clientSocket = null;
                 txtStatus.Text = "대기중...";
                 CONNECT_STATUS = "DISCONNECT";
+            }
+        }
+
+        private void PopulateTreeView(System.Windows.Forms.TreeView treeView, string json)
+        {
+            // JSON 문자열을 리스트로 변환
+            List<string> paths = JsonConvert.DeserializeObject<List<string>>(json);
+            if (paths == null || paths.Count == 0)
+                return;
+
+            // 트리뷰 초기화
+            treeView.Nodes.Clear();
+
+            // 트리뷰에 루트 노드 추가
+            TreeNode rootNode = null;
+            foreach (string path in paths)
+            {
+                string[] parts = path.Split('\\');
+                if (parts.Length == 0)
+                    continue;
+
+                if (rootNode == null)
+                {
+                    // 첫 번째 경로에서 루트 노드 생성
+                    rootNode = new TreeNode(parts[0]);
+                    treeView.Nodes.Add(rootNode);
+                }
+
+                TreeNode currentNode = rootNode;
+
+                for (int i = 1; i < parts.Length; i++)
+                {
+                    // 현재 노드의 하위 노드 중 동일한 이름을 가진 노드가 있는지 확인
+                    TreeNode[] foundNodes = currentNode.Nodes.Find(parts[i], false);
+
+                    if (foundNodes.Length == 0)
+                    {
+                        // 해당 이름의 하위 노드가 없으면 새로 생성
+                        TreeNode newNode = new TreeNode(parts[i])
+                        {
+                            Name = parts[i]
+                        };
+                        currentNode.Nodes.Add(newNode);
+                        currentNode = newNode;
+                    }
+                    else
+                    {
+                        // 해당 이름의 하위 노드가 있으면 그 노드를 현재 노드로 설정
+                        currentNode = foundNodes[0];
+                    }
+                }
             }
         }
 
@@ -308,22 +369,21 @@ namespace FTP_Client_Project
         }
 
         // 폴더 및 파일 목록 수신 함수
-        private void ReceiveFolderList()
+        public string ReceiveData(TcpClient client)
         {
-            stream = clientSocket.GetStream();
-            byte[] buffer = new byte[8192];
-            int bytes = stream.Read(buffer, 0, buffer.Length);
-            string folderListJson = Encoding.Unicode.GetString(buffer, 0, bytes);
+            NetworkStream stream = client.GetStream();
 
-            if (folderListJson.StartsWith("Error:"))
-            {
-                MessageBox.Show(folderListJson);
-            }
-            else
-            {
-                List<string> folderAndFileList = JsonConvert.DeserializeObject<List<string>>(folderListJson);
-                PopulateTreeView(folderAndFileList);
-            }
+            // 데이터 크기 수신
+            byte[] dataSize = new byte[4];
+            stream.Read(dataSize, 0, 4);
+            int size = BitConverter.ToInt32(dataSize, 0);
+
+            // 실제 데이터 수신
+            byte[] dataBytes = new byte[size];
+            stream.Read(dataBytes, 0, size);
+
+            string data = Encoding.UTF8.GetString(dataBytes);
+            return data;
         }
 
         private void PopulateTreeView(List<string> folderAndFileList)
