@@ -21,3 +21,6 @@ C:\Users\User\Source\Repos\FTP_Client_Project\obj\Debug\FTP_Client_Project.pdb
 C:\Users\User\Source\Repos\FTP_Client_Project\bin\Debug\Newtonsoft.Json.dll
 C:\Users\User\Source\Repos\FTP_Client_Project\bin\Debug\Newtonsoft.Json.xml
 C:\Users\User\Source\Repos\FTP_Client_Project\obj\Debug\FTP_Clie.F23E8FCC.Up2Date
+C:\Users\82106\source\repos\FTP_Client_Project\bin\Debug\Newtonsoft.Json.dll
+C:\Users\82106\source\repos\FTP_Client_Project\bin\Debug\Newtonsoft.Json.xml
+C:\Users\82106\source\repos\FTP_Client_Project\obj\Debug\FTP_Clie.F23E8FCC.Up2Date
